@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerFit Pro Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
+body{background:#0e0e0e;color:#fff}
+
+/* HEADER */
+header{
+display:flex;justify-content:space-between;align-items:center;
+padding:15px 8%;background:#000;position:sticky;top:0;z-index:1000
+}
+.logo{color:#00f2ff;font-size:24px;font-weight:700}
+.search{padding:8px;border-radius:5px;border:none;width:200px}
+.cart{cursor:pointer}
+
+/* HERO */
+.hero{
+height:50vh;
+background:url("https://images.unsplash.com/photo-1558611848-73f7eb4001ab") center/cover;
+display:flex;justify-content:center;align-items:center
+}
+.hero h1{
+background:rgba(0,0,0,.7);padding:20px 40px;
+border-radius:10px;color:#00f2ff
+}
+
+/* PRODUCTS */
+.section{padding:50px 8%}
+.products{
+display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:25px
+}
+.card{
+background:#111;border-radius:12px;overflow:hidden;
+box-shadow:0 0 10px #00f2ff30;
+transition:.3s
+}
+.card:hover{transform:translateY(-8px)}
+.card img{width:100%;height:200px;object-fit:cover}
+.card-content{padding:15px}
+.card-content h3{color:#00f2ff}
+button{
+margin-top:10px;padding:10px;width:100%;
+background:#00f2ff;border:none;border-radius:5px;font-weight:bold;cursor:pointer
+}
+
+/* MODAL */
+.modal{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,.85);display:none;
+justify-content:center;align-items:center
+}
+.modal-content{
+background:#111;padding:25px;border-radius:10px;
+width:95%;max-width:420px
+}
+.close{float:right;cursor:pointer;color:red}
+
+/* ADMIN */
+.admin-btn{
+position:fixed;bottom:20px;right:20px;
+background:#00f2ff;color:#000;padding:15px;border-radius:50%;
+cursor:pointer;font-weight:bold
+}
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo">PowerFit Pro</div>
+<input class="search" placeholder="Search..." onkeyup="searchProducts(this.value)">
+<div class="cart" onclick="openCart()">🛒 Cart (<span id="cartCount">0</span>)</div>
+</header>
+
+<div class="hero"><h1>Elite Gym Equipment Store</h1></div>
+
+<div class="section">
+<div class="products" id="products"></div>
+</div>
+
+<!-- CART -->
+<div class="modal" id="cartModal">
+<div class="modal-content">
+<span class="close" onclick="closeCart()">✖</span>
+<h2>Your Cart</h2>
+<div id="cartItems"></div>
+<h3 id="totalAmount"></h3>
+<br>
+<select id="payment">
+<option>Cash On Delivery</option>
+<option>UPI</option>
+</select>
+<button onclick="placeOrder()">Place Order</button>
+</div>
+</div>
+
+<!-- ADMIN -->
+<div class="modal" id="adminModal">
+<div class="modal-content">
+<span class="close" onclick="closeAdmin()">✖</span>
+<h2>Admin Panel</h2>
+<input id="pname" placeholder="Product Name"><br><br>
+<input id="pprice" placeholder="Price"><br><br>
+<input id="pimg" placeholder="Image URL"><br><br>
+<button onclick="addProduct()">Add Product</button>
+</div>
+</div>
+
+<div class="admin-btn" onclick="openAdmin()">⚙</div>
+
+<script>
+
+/* DATABASE */
+let products = JSON.parse(localStorage.getItem("products")) || [
+{name:"Dumbbells Set",price:2999,img:"https://images.unsplash.com/photo-1583454110551-21f2fa2afe61"},
+{name:"Barbell Rod",price:4999,img:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
+{name:"Protein Powder",price:3499,img:"https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b"},
+{name:"Workout Bench",price:6999,img:"https://images.unsplash.com/photo-1599058917765-a780eda07a3e"},
+{name:"Skipping Rope",price:499,img:"https://images.unsplash.com/photo-1594381898411-846e7d193883"},
+{name:"Gym Gloves",price:799,img:"https://images.unsplash.com/photo-1598970434795-0c54fe7c0642"},
+{name:"Treadmill",price:25999,img:"https://images.unsplash.com/photo-1552674605-db6ffd4facb5"},
+{name:"Mass Gainer",price:2499,img:"https://images.unsplash.com/photo-1584466977773-e625c37cdd50"},
+{name:"Kettlebell",price:1999,img:"https://images.unsplash.com/photo-1605296867424-35fc25c9212a"},
+{name:"Resistance Bands",price:999,img:"https://images.unsplash.com/photo-1594737625785-cb7c1c8e1f4a"}
+];
+
+let cart=[];
+
+/* LOAD PRODUCTS */
+function loadProducts(list=products){
+document.getElementById("products").innerHTML="";
+list.forEach((p,i)=>{
+document.getElementById("products").innerHTML+=`
+<div class="card">
+<img src="${p.img}">
+<div class="card-content">
+<h3>${p.name}</h3>
+<p>₹${p.price}</p>
+<button onclick="addToCart(${i})">Add to Cart</button>
+</div></div>`;
+});
+}
+loadProducts();
+
+/* CART */
+function addToCart(i){
+cart.push(products[i]);
+document.getElementById("cartCount").innerText=cart.length;
+}
+
+function openCart(){
+let modal=document.getElementById("cartModal");
+modal.style.display="flex";
+
+let items="";
+let total=0;
+
+cart.forEach(c=>{
+items+=`<p>${c.name} - ₹${c.price}</p>`;
+total+=Number(c.price);
+});
+
+document.getElementById("cartItems").innerHTML=items;
+document.getElementById("totalAmount").innerText="Total: ₹"+total;
+}
+
+function closeCart(){
+document.getElementById("cartModal").style.display="none";
+}
+
+/* ORDER */
+function placeOrder(){
+let payment=document.getElementById("payment").value;
+let total=cart.reduce((sum,p)=>sum+Number(p.price),0);
+
+if(cart.length===0){
+alert("Cart is empty");
+return;
+}
+
+if(payment==="UPI"){
+window.location.href=`upi://pay?pa=demo@upi&pn=PowerFit&am=${total}`;
+}else{
+alert("Order placed successfully with Cash On Delivery");
+}
+
+cart=[];
+document.getElementById("cartCount").innerText=0;
+closeCart();
+}
+
+/* SEARCH */
+function searchProducts(val){
+let filtered=products.filter(p=>
+p.name.toLowerCase().includes(val.toLowerCase())
+);
+loadProducts(filtered);
+}
+
+/* ADMIN */
+function openAdmin(){
+document.getElementById("adminModal").style.display="flex";
+}
+function closeAdmin(){
+document.getElementById("adminModal").style.display="none";
+}
+function addProduct(){
+let name=document.getElementById("pname").value;
+let price=document.getElementById("pprice").value;
+let img=document.getElementById("pimg").value;
+
+if(!name || !price || !img){
+alert("Fill all fields");
+return;
+}
+
+products.push({name,price,img});
+localStorage.setItem("products",JSON.stringify(products));
+loadProducts();
+closeAdmin();
+}
+
+</script>
+</body>
+  </html>
